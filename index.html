@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Forecasting Platform</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- SheetJS for client-side Excel reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="theme-toggle" id="theme-toggle" title="Toggle Light/Dark Mode">
+                <span class="theme-toggle-icon">🌓</span>
+                <span class="theme-toggle-text">Dark Mode</span>
+            </button>
+            <h1>🤖 AI Forecasting Platform</h1>
+            <p>Advanced Machine Learning Forecasting with Neural Networks & Statistical Models</p>
+            <div id="backend-status" class="backend-status" style="margin-top: 10px; font-size: 12px; padding: 5px 10px; border-radius: 4px; display: inline-block; background: rgba(255,255,255,0.1);">
+                <span style="color: #ff9800;">●</span> Checking connection...
+            </div>
+        </header>
+
+        <!-- Progress Steps Indicator -->
+        <div class="wizard-steps">
+            <div class="step-indicator active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Upload Data</div>
+            </div>
+            <div class="step-indicator" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">EDA</div>
+            </div>
+            <div class="step-indicator" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Preprocess</div>
+            </div>
+            <div class="step-indicator" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Train Model</div>
+            </div>
+            <div class="step-indicator" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-label">Forecast</div>
+            </div>
+            <div class="step-indicator" data-step="6">
+                <div class="step-number">6</div>
+                <div class="step-label">Models</div>
+            </div>
+        </div>
+
+        <!-- Step 1: File Upload -->
+        <div class="wizard-page active" id="page-1">
+            <section class="section">
+                <h2>1. Upload Data</h2>
+                <div class="upload-area">
+                    <input type="file" id="file-input" accept=".csv,.xlsx,.xls,.json" onchange="handleFileSelect()">
+                    <div id="sheet-selector" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+                        <label for="sheet-select" style="display: block; margin-bottom: 8px; font-weight: bold; color: #667eea;">
+                            📄 Select Excel Sheet:
+                        </label>
+                        <select id="sheet-select" class="input-field" style="width: 100%; max-width: 300px;">
+                            <option value="">Loading sheets...</option>
+                        </select>
+                        <p style="font-size: 12px; color: #666; margin-top: 8px; margin-bottom: 0;">
+                            <em>💡 Select a sheet from the dropdown above, then click "Upload File" to load that sheet</em>
+                        </p>
+                    </div>
+                    <button onclick="uploadFile()" class="btn btn-primary">Upload File</button>
+                </div>
+                <div id="upload-status" class="status-message"></div>
+                <div id="file-info" class="file-info"></div>
+                <div class="wizard-navigation">
+                    <button onclick="nextStep()" class="btn btn-primary" id="next-btn-1" disabled>Next: EDA →</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Step 2: EDA Section -->
+        <div class="wizard-page" id="page-2">
+            <section class="section">
+                <h2>2. Exploratory Data Analysis</h2>
+                <div class="controls">
+                    <div class="form-group">
+                        <label>Filename:</label>
+                        <input type="text" id="eda-filename" placeholder="Enter filename" class="input-field" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Sheet Name (Excel only):</label>
+                        <select id="eda-sheet-name" class="input-field">
+                            <option value="">First Sheet (Default)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date Column:</label>
+                        <select id="date-column" class="input-field">
+                            <option value="">Select Date Column</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Value Column:</label>
+                        <select id="value-column" class="input-field">
+                            <option value="">Select Value Column</option>
+                        </select>
+                    </div>
+                    <button onclick="runEDA()" class="btn btn-secondary">Run EDA</button>
+                </div>
+                <div id="eda-status" class="status-message"></div>
+                <div id="eda-results" class="results"></div>
+                <div class="wizard-navigation">
+                    <button onclick="prevStep()" class="btn btn-secondary">← Previous</button>
+                    <button onclick="nextStep()" class="btn btn-primary">Next: Preprocess →</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Step 3: Preprocessing Section -->
+        <div class="wizard-page" id="page-3">
+            <section class="section">
+                <h2>3. Data Preprocessing</h2>
+                <div class="controls">
+                    <div class="form-group">
+                        <label>Filename:</label>
+                        <input type="text" id="preprocess-filename" placeholder="Enter filename" class="input-field" readonly>
+                    </div>
+                    <div class="form-group" id="preprocess-sheet-selector" style="display: none;">
+                        <label>Sheet Name (for Excel files):</label>
+                        <select id="preprocess-sheet-name" class="input-field">
+                            <option value="">First Sheet (Default)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Strategy:</label>
+                        <select id="preprocess-strategy" class="input-field">
+                            <option value="mean">Mean</option>
+                            <option value="median">Median</option>
+                            <option value="mode">Mode</option>
+                            <option value="forward_fill">Forward Fill</option>
+                            <option value="backward_fill">Backward Fill</option>
+                            <option value="drop">Drop</option>
+                        </select>
+                    </div>
+                    <button onclick="handleMissing()" class="btn btn-secondary">Handle Missing</button>
+                    <button onclick="detectOutliers()" class="btn btn-secondary">Detect Outliers</button>
+                    <button onclick="scaleFeatures()" class="btn btn-secondary">Scale Features</button>
+                </div>
+                
+                <!-- Stationarity and Seasonality Section -->
+                <div style="margin-top: 30px; padding: 20px; background: rgba(201, 169, 97, 0.05); border-radius: 8px; border: 1px solid rgba(201, 169, 97, 0.2);">
+                    <h3 style="color: #C9A961; margin-bottom: 20px;">📊 Stationarity & Seasonality Analysis</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <!-- Stationarity Check -->
+                        <div style="padding: 15px; background: rgba(15, 15, 15, 0.5); border-radius: 6px;">
+                            <h4 style="color: #C9A961; margin-bottom: 15px; font-size: 1.1em;">Stationarity Check</h4>
+                            <div class="form-group">
+                                <label style="font-size: 12px; color: #a0a0a0;">Date Column:</label>
+                                <select id="stationarity-date-column" class="input-field" style="margin-top: 5px;">
+                                    <option value="">Select date column</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px; color: #a0a0a0;">Value Column:</label>
+                                <select id="stationarity-value-column" class="input-field" style="margin-top: 5px;">
+                                    <option value="">Select value column</option>
+                                </select>
+                            </div>
+                            <button onclick="checkStationarity()" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">Check Stationarity</button>
+                            <div id="stationarity-status" style="margin-top: 10px; font-size: 12px;"></div>
+                        </div>
+                        
+                        <!-- Seasonality Check -->
+                        <div style="padding: 15px; background: rgba(15, 15, 15, 0.5); border-radius: 6px;">
+                            <h4 style="color: #C9A961; margin-bottom: 15px; font-size: 1.1em;">Seasonality Check</h4>
+                            <div class="form-group">
+                                <label style="font-size: 12px; color: #a0a0a0;">Date Column:</label>
+                                <select id="seasonality-date-column" class="input-field" style="margin-top: 5px;">
+                                    <option value="">Select date column</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px; color: #a0a0a0;">Value Column:</label>
+                                <select id="seasonality-value-column" class="input-field" style="margin-top: 5px;">
+                                    <option value="">Select value column</option>
+                                </select>
+                            </div>
+                            <button onclick="checkSeasonality()" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">Check Seasonality</button>
+                            <div id="seasonality-status" style="margin-top: 10px; font-size: 12px;"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fix Stationarity -->
+                    <div id="fix-stationarity-section" style="display: none; padding: 15px; background: rgba(15, 15, 15, 0.5); border-radius: 6px; margin-bottom: 15px;">
+                        <h4 style="color: #C9A961; margin-bottom: 15px;">Fix Non-Stationarity</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label style="font-size: 12px; color: #a0a0a0;">Method:</label>
+                                <select id="stationarity-method" class="input-field" style="margin-top: 5px;">
+                                    <option value="differencing">Differencing</option>
+                                    <option value="log_transform">Log Transform</option>
+                                    <option value="log_differencing">Log + Differencing</option>
+                                    <option value="sqrt_transform">Square Root Transform</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px; color: #a0a0a0;">Differencing Order:</label>
+                                <input type="number" id="stationarity-order" value="1" min="1" max="3" class="input-field" style="margin-top: 5px;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label style="font-size: 12px; color: #a0a0a0;">Save as (optional):</label>
+                            <input type="text" id="stationarity-save-as" placeholder="Leave empty for auto-name" class="input-field" style="margin-top: 5px;">
+                        </div>
+                        <button onclick="fixStationarity()" class="btn btn-success" style="width: 100%; margin-top: 10px;">Fix Stationarity</button>
+                    </div>
+                    
+                    <!-- Fix Seasonality -->
+                    <div id="fix-seasonality-section" style="display: none; padding: 15px; background: rgba(15, 15, 15, 0.5); border-radius: 6px;">
+                        <h4 style="color: #C9A961; margin-bottom: 15px;">Fix Seasonality</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label style="font-size: 12px; color: #a0a0a0;">Method:</label>
+                                <select id="seasonality-method" class="input-field" style="margin-top: 5px;">
+                                    <option value="deseasonalize">Deseasonalize</option>
+                                    <option value="seasonal_differencing">Seasonal Differencing</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px; color: #a0a0a0;">Seasonal Period:</label>
+                                <input type="number" id="seasonality-period" placeholder="Auto-detect" min="2" class="input-field" style="margin-top: 5px;">
+                                <small style="font-size: 11px; color: #a0a0a0;">Leave empty for auto-detection</small>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label style="font-size: 12px; color: #a0a0a0;">Save as (optional):</label>
+                            <input type="text" id="seasonality-save-as" placeholder="Leave empty for auto-name" class="input-field" style="margin-top: 5px;">
+                        </div>
+                        <button onclick="fixSeasonality()" class="btn btn-success" style="width: 100%; margin-top: 10px;">Fix Seasonality</button>
+                    </div>
+                </div>
+                
+                <div id="preprocess-results" class="results"></div>
+                <div class="wizard-navigation">
+                    <button onclick="prevStep()" class="btn btn-secondary">← Previous</button>
+                    <button onclick="nextStep()" class="btn btn-primary">Next: Train Model →</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Step 4: Model Training Section -->
+        <div class="wizard-page" id="page-4">
+            <section class="section">
+                <h2>4. Train Model</h2>
+                <div class="controls">
+                    <div class="form-group">
+                        <label>Filename:</label>
+                        <input type="text" id="train-filename" placeholder="Enter filename" class="input-field" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Sheet Name (Excel only):</label>
+                        <select id="train-sheet-name" class="input-field">
+                            <option value="">First Sheet (Default)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date Column:</label>
+                        <select id="train-date-column" class="input-field">
+                            <option value="">Select Date Column</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Column:</label>
+                        <select id="train-target-column" class="input-field">
+                            <option value="">Select Target Column</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Category Column (Optional - Train separate models for each category):</label>
+                        <select id="train-category-column" class="input-field">
+                            <option value="">None (Train single model for all data)</option>
+                        </select>
+                        <p style="font-size: 11px; color: #a0a0a0; margin-top: 5px;">
+                            <em>If selected, separate models will be trained for each category (e.g., sou1, sou2, sou3)</em>
+                        </p>
+                    </div>
+                    <div class="form-group">
+                        <label>Model Type:</label>
+                        <select id="model-type" class="input-field" onchange="updateHyperparameters()">
+                            <option value="arima">ARIMA</option>
+                            <option value="sarima">SARIMA</option>
+                            <option value="lstm">LSTM</option>
+                            <option value="xgboost">XGBoost</option>
+                            <option value="random_forest">Random Forest</option>
+                            <option value="prophet">Prophet</option>
+                            <option value="ets">ETS</option>
+                            <option value="ensemble">Ensemble (Prophet + SARIMAX + GBM)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Data Split Method:</label>
+                        <select id="split-method" class="input-field" onchange="updateSplitMethod()">
+                            <option value="time">Time-based Split (Recommended for Time Series)</option>
+                            <option value="percentage">Percentage Split</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="test-size-group">
+                        <label>Train/Validation/Test Split (Percentages):</label>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px;">
+                            <div>
+                                <label style="font-size: 11px; color: #a0a0a0;">Train Size:</label>
+                                <input type="number" id="train-size" value="0.6" min="0.1" max="0.9" step="0.05" class="input-field" onchange="updateSplitPercentages()">
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #a0a0a0;">Validation Size:</label>
+                                <input type="number" id="validation-size" value="0.2" min="0" max="0.4" step="0.05" class="input-field" onchange="updateSplitPercentages()">
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #a0a0a0;">Test Size:</label>
+                                <input type="number" id="test-size" value="0.2" min="0" max="0.4" step="0.05" class="input-field" onchange="updateSplitPercentages()">
+                            </div>
+                        </div>
+                        <p style="font-size: 12px; color: #a0a0a0; margin-top: 8px;">
+                            <em>Example: 60% train, 20% validation, 20% test. Total must equal 1.0</em>
+                        </p>
+                        <div id="split-validation-message" style="font-size: 12px; margin-top: 5px;"></div>
+                    </div>
+                    <div class="form-group" id="test-size-count-group" style="display: none;">
+                        <label>Test Size (Number of Samples):</label>
+                        <input type="number" id="test-size-count" value="0" min="0" class="input-field">
+                        <p style="font-size: 12px; color: #a0a0a0; margin-top: 5px;">
+                            <em>Enter number of samples for test set (0 = use percentage)</em>
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Feature Selection -->
+                <div id="feature-selection" style="margin-top: 15px; display: none;">
+                    <h3>Select Features (Optional - leave empty to use all)</h3>
+                    <div id="feature-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;"></div>
+                    <button onclick="loadFeatures()" class="btn btn-secondary" style="margin-top: 10px;">Load Available Features</button>
+                </div>
+                
+                <!-- Hyperparameters -->
+                <div id="hyperparameters" style="margin-top: 15px;">
+                    <h3>Hyperparameters</h3>
+                    <div id="hyperparams-content"></div>
+                </div>
+                
+                <!-- Advanced Options -->
+                <div style="margin-top: 20px; padding: 15px; background: rgba(201, 169, 97, 0.05); border-radius: 8px; border: 1px solid rgba(201, 169, 97, 0.2);">
+                    <h3 style="color: #C9A961; margin-bottom: 15px;">🔬 Advanced Options</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="enable-cv" style="width: auto;">
+                                <span>Enable Cross-Validation (5 folds)</span>
+                            </label>
+                            <small style="font-size: 0.75em; color: #a0a0a0; display: block; margin-left: 24px; margin-top: 3px;">
+                                Time series aware CV for robust evaluation
+                            </small>
+                        </div>
+                        <div>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="check-leakage" checked style="width: auto;">
+                                <span>Check Data Leakage</span>
+                            </label>
+                            <small style="font-size: 0.75em; color: #a0a0a0; display: block; margin-left: 24px; margin-top: 3px;">
+                                Detect potential data leakage before training
+                            </small>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 0.85em;">CV Folds:</label>
+                        <input type="number" id="cv-folds" value="5" min="2" max="10" class="input-field" style="width: 100px; margin-left: 10px;">
+                    </div>
+                </div>
+                
+                <button onclick="trainModel()" class="btn btn-success" style="margin-top: 15px;">Train Model</button>
+                <div id="train-status" class="status-message" style="margin-top: 15px;"></div>
+                <div id="train-progress-container" style="display: none; margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span id="train-progress-text" style="color: #C9A961; font-size: 14px; font-weight: 500;">Training model...</span>
+                        <span id="train-progress-percent" style="color: #C9A961; font-size: 14px; font-weight: 500;">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 8px; background: rgba(201, 169, 97, 0.1); border-radius: 4px; overflow: hidden;">
+                        <div id="train-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #C9A961 0%, #D4AF37 100%); border-radius: 4px; transition: width 0.3s ease; box-shadow: 0 0 10px rgba(201, 169, 97, 0.5);"></div>
+                    </div>
+                    <div id="train-progress-details" style="margin-top: 8px; font-size: 12px; color: #a0a0a0;"></div>
+                </div>
+                <div id="train-results" class="results" style="margin-top: 15px;"></div>
+                <div class="wizard-navigation">
+                    <button onclick="prevStep()" class="btn btn-secondary">← Previous</button>
+                    <button onclick="nextStep()" class="btn btn-primary">Next: Forecast →</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Step 5: Forecasting Section -->
+        <div class="wizard-page" id="page-5">
+            <section class="section">
+                <h2>5. Generate Forecast</h2>
+                
+                <!-- Option Selection -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <h3 style="margin-bottom: 15px;">Forecast Options:</h3>
+                    <label style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <input type="radio" name="forecast-mode" value="existing" checked onchange="toggleForecastMode()" style="margin-right: 8px;">
+                        <span>Use existing uploaded file</span>
+                    </label>
+                    <label style="display: flex; align-items: center;">
+                        <input type="radio" name="forecast-mode" value="new" onchange="toggleForecastMode()" style="margin-right: 8px;">
+                        <span>Upload new file with future feature values</span>
+                    </label>
+                </div>
+                
+                <!-- Existing File Mode -->
+                <div id="forecast-existing-mode" class="forecast-mode-section">
+                    <div class="controls">
+                        <div class="form-group">
+                            <label>Model Filename:</label>
+                            <input type="text" id="forecast-model-name" placeholder="Model filename" class="input-field">
+                        </div>
+                        <div class="form-group">
+                            <label>Data Filename (optional):</label>
+                            <input type="text" id="forecast-filename" placeholder="Data filename (optional)" class="input-field" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Date Column (optional - auto-detected):</label>
+                            <select id="forecast-date-column" class="input-field">
+                                <option value="">Auto-detect from model</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Forecast Range:</label>
+                            <select id="forecast-range-type" class="input-field" onchange="toggleForecastRange()">
+                                <option value="horizon">By Number of Steps</option>
+                                <option value="daterange">By Date Range</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="forecast-horizon-group">
+                            <label>Forecast Horizon (Number of Steps):</label>
+                            <input type="number" id="forecast-horizon" value="30" min="1" placeholder="Forecast horizon" class="input-field">
+                        </div>
+                        <div class="form-group" id="forecast-daterange-group" style="display: none;">
+                            <label>Start Date:</label>
+                            <input type="date" id="forecast-start-date" class="input-field">
+                            <label style="margin-top: 10px;">End Date:</label>
+                            <input type="date" id="forecast-end-date" class="input-field">
+                            <p style="font-size: 12px; color: #a0a0a0; margin-top: 5px;">
+                                <em>Select the date range for forecasting</em>
+                            </p>
+                        </div>
+                        <button onclick="generateForecast()" class="btn btn-success">Generate Forecast</button>
+                    </div>
+                </div>
+                
+                <!-- New File Upload Mode -->
+                <div id="forecast-new-mode" class="forecast-mode-section" style="display: none;">
+                    <div class="controls">
+                        <div class="form-group">
+                            <label>Model Filename:</label>
+                            <input type="text" id="forecast-model-name-new" placeholder="Model filename" class="input-field">
+                        </div>
+                        <div class="form-group">
+                            <label>Upload File with Future Features:</label>
+                            <input type="file" id="forecast-file-input" accept=".csv,.xlsx,.xls,.json" onchange="handleForecastFileSelect()" class="input-field">
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">
+                                <em>Upload a file containing future dates and feature values. The number of rows will determine the forecast horizon.</em>
+                            </p>
+                        </div>
+                        <div id="forecast-sheet-selector-new" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <label for="forecast-sheet-select-new" style="display: block; margin-bottom: 8px; font-weight: bold; color: #667eea;">
+                                📄 Select Excel Sheet:
+                            </label>
+                            <select id="forecast-sheet-select-new" class="input-field" style="width: 100%; max-width: 300px;">
+                                <option value="">First Sheet (Default)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Date Column (optional - auto-detected):</label>
+                            <select id="forecast-date-column-new" class="input-field">
+                                <option value="">Auto-detect from model</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Forecast Range:</label>
+                            <select id="forecast-range-type-new" class="input-field" onchange="toggleForecastRangeNew()">
+                                <option value="all">Use All Rows from File</option>
+                                <option value="daterange">By Date Range</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="forecast-daterange-group-new" style="display: none;">
+                            <label>Start Date:</label>
+                            <input type="date" id="forecast-start-date-new" class="input-field">
+                            <label style="margin-top: 10px;">End Date:</label>
+                            <input type="date" id="forecast-end-date-new" class="input-field">
+                            <p style="font-size: 12px; color: #a0a0a0; margin-top: 5px;">
+                                <em>Select the date range to filter from uploaded file</em>
+                            </p>
+                        </div>
+                        <button onclick="generateForecastWithFile()" class="btn btn-success">Generate Forecast from File</button>
+                    </div>
+                </div>
+                
+                <div id="forecast-results" class="results"></div>
+                <div id="forecast-chart" class="chart-container"></div>
+                <div class="wizard-navigation">
+                    <button onclick="prevStep()" class="btn btn-secondary">← Previous</button>
+                    <button onclick="nextStep()" class="btn btn-primary">Next: Models →</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Step 6: Model List Section -->
+        <div class="wizard-page" id="page-6">
+            <section class="section">
+                <h2>6. Trained Models</h2>
+                <button onclick="listModels()" class="btn btn-secondary">Refresh Model List</button>
+                <div id="models-list" class="results"></div>
+                <div class="wizard-navigation">
+                    <button onclick="prevStep()" class="btn btn-secondary">← Previous</button>
+                    <button onclick="goToStep(1)" class="btn btn-primary">Start Over</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
